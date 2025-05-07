@@ -187,10 +187,7 @@ async function openLastApk() {
     await downloadLastApk();
   }
 }
-  } catch (error) {
-    log(error.name === 'AbortError' ? 'Действие отменено' : `Ошибка открытия: ${error.message}`);
-    await downloadLastApk();
-  }
+  
 }
 
 // Передача APK через Web Share API для установки
