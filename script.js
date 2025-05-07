@@ -1,37 +1,49 @@
-// Импорт библиотеки idb
-import { openDB } from 'https://unpkg.com/idb@7.0.0/build/esm/index.js';
+import { openDB } from 'https://unpkg.com/idb@8.0.0/build/esm/index.js';
 
 const apkUrlInput = document.getElementById('apkUrl');
 const output = document.getElementById('output');
+const downloadBtn = document.getElementById('downloadBtn');
+const shareBtn = document.getElementById('shareBtn');
+const historyBtn = document.getElementById('historyBtn');
 
-// Открытие или создание базы данных IndexedDB
-async function getDB() {
-  return await openDB('apkDB', 1, {
-    upgrade(db) {
-      db.createObjectStore('apks', { keyPath: 'name' });
-      db.createObjectStore('history', { autoIncrement: true });
-    },
-  });
+// Логирование для отладки
+function log(message) {
+  console.log([APK Share] ${message});
+  output.textContent += \n${message};
 }
 
-// Загрузка APK с сервера и сохранение в IndexedDB
+// Открытие базы данных IndexedDB
+async function getDB() {
+  try {
+    log('Открытие IndexedDB...');
+    return await openDB('apkDB', 1, {
+      upgrade(db) {
+        db.createObjectStore('apks', { keyPath: 'name' });
+        db.createObjectStore('history', { autoIncrement: true });
+      },
+    });
+  } catch (error) {
+    log(Ошибка IndexedDB: ${error.message});
+    throw error;
+  }
+}
+
+// Загрузка и сохранение APK
 async function downloadAndSaveApk() {
   const url = apkUrlInput.value.trim();
   if (!url || !url.match(/\.(apk)$/i)) {
-    output.textContent = 'Пожалуйста, введите действительный URL APK (например, https://example.com/app.apk)';
+    log('Введите действительный URL APK');
     return;
   }
 
-  output.textContent = 'Загрузка APK...';
+  log('Загрузка APK...');
   try {
     const response = await fetch(url, {
-      headers: {
-        'Accept': 'application/vnd.android.package-archive',
-      },
+      headers: { 'Accept': 'application/vnd.android.package-archive' },
     });
 
     if (!response.ok) {
-      throw new Error(Ошибка HTTP: ${response.status}. Возможно, сервер не поддерживает CORS.);
+      throw new Error(HTTP ошибка: ${response.status});
     }
 
     const blob = await response.blob();
@@ -40,7 +52,6 @@ async function downloadAndSaveApk() {
       type: 'application/vnd.android.package-archive',
     });
 
-    // Сохранение в IndexedDB
     const db = await getDB();
     await db.put('apks', { name: fileName, data: file });
     await db.add('history', {
@@ -50,20 +61,21 @@ async function downloadAndSaveApk() {
       date: new Date(),
     });
 
-    output.textContent = APK загружен и сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ)\nНажмите "Поделиться последним APK" для установки.;
+    log(APK сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ));
   } catch (error) {
-    output.textContent = Ошибка загрузки: ${error.message}\nПопробуйте скачать APK напрямую по ссылке: ${url};
+    log(Ошибка загрузки: ${error.message}\nПопробуйте скачать напрямую: ${url});
     const a = document.createElement('a');
     a.href = url;
     a.textContent = 'Скачать APK';
+    a.target = '_blank';
     output.appendChild(a);
   }
 }
 
-// Передача последнего APK через Web Share API
+// Передача APK через Web Share API
 async function shareLastApk() {
   if (!navigator.share || !navigator.canShare) {
-    output.textContent = 'Web Share API не поддерживается. Попробуйте скачать файл.';
+    log('Web Share API не поддерживается');
     await downloadLastApk();
     return;
   }
@@ -72,7 +84,7 @@ async function shareLastApk() {
     const db = await getDB();
     const apks = await db.getAll('apks');
     if (!apks.length) {
-      output.textContent = 'Нет сохраненных APK. Загрузите APK по URL.';
+      log('Нет сохраненных APK');
       return;
     }
 
@@ -82,7 +94,7 @@ async function shareLastApk() {
     });
 
     if (!navigator.canShare({ files: [file] })) {
-      output.textContent = 'Передача файлов не поддерживается. Попробуйте скачать файл.';
+      log('Передача файлов не поддерживается');
       await downloadLastApk();
       return;
     }
@@ -90,26 +102,22 @@ async function shareLastApk() {
     await navigator.share({
       files: [file],
       title: Установить ${file.name},
-      text: Установите приложение ${file.name} на ваше устройство,
+      text: Установите ${file.name},
     });
-    output.textContent = APK ${file.name} передан в системный интерфейс.\nВыберите "Package Installer" для установки.\nЕсли установка не началась, проверьте настройки "Установка из неизвестных источников" для браузера.;
+    log(APK ${file.name} передан. Выберите "Package Installer".);
   } catch (error) {
-    if (error.name === 'AbortError') {
-      output.textContent = 'Обмен отменен пользователем';
-    } else {
-      output.textContent = Ошибка: ${error.message};
-      await downloadLastApk();
-    }
+    log(error.name === 'AbortError' ? 'Обмен отменен' : Ошибка: ${error.message});
+    await downloadLastApk();
   }
 }
 
-// Альтернатива: скачивание APK
+// Скачивание APK как альтернатива
 async function downloadLastApk() {
   try {
     const db = await getDB();
     const apks = await db.getAll('apks');
-    if (! ${apks.length}) {
-      output.textContent = 'Нет сохраненных APK для скачивания';
+    if (!apks.length) {
+      log('Нет сохраненных APK');
       return;
     }
 
@@ -118,16 +126,15 @@ async function downloadLastApk() {
       type: 'application/vnd.android.package-archive',
     });
 
-
-  const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
     a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
-    output.textContent += '\nAPK скачан. Откройте файл в "Загрузках" и выберите "Package Installer" для установки.';
+    log('APK скачан. Откройте в "Загрузках".');
   } catch (error) {
-    output.textContent = Ошибка скачивания: ${error.message};
+    log(Ошибка скачивания: ${error.message});
   }
 }
 
@@ -137,11 +144,10 @@ async function showHistory() {
     const db = await getDB();
     const history = await db.getAll('history');
     if (!history.length) {
-      output.textContent = 'История загрузок пуста';
+      log('История пуста');
       return;
     }
-
-    output.innerHTML = '<h3>История загрузок:</h3>' + history
+output.innerHTML = '<h3>История загрузок:</h3>' + history
       .map(item => 
         <div class="history-item">
           ${item.name} (${(item.size / 1024 / 1024).toFixed(2)} МБ)<br>
@@ -151,14 +157,21 @@ async function showHistory() {
       )
       .join('');
   } catch (error) {
-    output.textContent = Ошибка загрузки истории: ${error.message};
+    log(Ошибка истории: ${error.message});
   }
 }
 
-// Валидация URL при вводе
+// Привязка событий
+downloadBtn.addEventListener('click', downloadAndSaveApk);
+shareBtn.addEventListener('click', shareLastApk);
+historyBtn.addEventListener('click', showHistory);
+
 apkUrlInput.addEventListener('input', () => {
   const url = apkUrlInput.value.trim();
   if (url) {
-    output.textContent = URL: ${url}. Нажмите "Скачать и сохранить APK".;
+    log(URL: ${url}. Нажмите "Скачать".);
   }
 });
+
+// Инициализация
+log('Приложение загружено. Вставьте URL APK.');
