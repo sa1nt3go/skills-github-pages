@@ -1,4 +1,5 @@
-import { openDB } from 'https://unpkg.com/idb@8.0.0/build/esm/index.js';
+import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8.0.0/+esm';
+console.log("Script lo")
 
 const apkUrlInput = document.getElementById('apkUrl');
 const output = document.getElementById('output');
