@@ -8,8 +8,8 @@ const historyBtn = document.getElementById('historyBtn');
 
 // Логирование для отладки
 function log(message) {
-  console.log([APK Share] ${message});
-  output.textContent += \n${message};
+  console.log('[APK Share] ${message}');
+  output.textContent += '\n${message';
 }
 
 // Открытие базы данных IndexedDB
@@ -23,7 +23,7 @@ async function getDB() {
       },
     });
   } catch (error) {
-    log(Ошибка IndexedDB: ${error.message});
+    log('Ошибка IndexedDB: ${error.message}');
     throw error;
   }
 }
@@ -61,9 +61,9 @@ async function downloadAndSaveApk() {
       date: new Date(),
     });
 
-    log(APK сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ));
+    log('APK сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ)');
   } catch (error) {
-    log(Ошибка загрузки: ${error.message}\nПопробуйте скачать напрямую: ${url});
+    log('Ошибка загрузки: ${error.message}\nПопробуйте скачать напрямую: ${url}');
     const a = document.createElement('a');
     a.href = url;
     a.textContent = 'Скачать APK';
@@ -106,7 +106,7 @@ async function shareLastApk() {
     });
     log(APK ${file.name} передан. Выберите "Package Installer".);
   } catch (error) {
-    log(error.name === 'AbortError' ? 'Обмен отменен' : Ошибка: ${error.message});
+    log(error.name === 'AbortError' ? 'Обмен отменен' : 'Ошибка: ${error.message}');
     await downloadLastApk();
   }
 }
@@ -169,7 +169,7 @@ historyBtn.addEventListener('click', showHistory);
 apkUrlInput.addEventListener('input', () => {
   const url = apkUrlInput.value.trim();
   if (url) {
-    log(URL: ${url}. Нажмите "Скачать".);
+    log('URL: ${url}. Нажмите "Скачать".');
   }
 });
 
