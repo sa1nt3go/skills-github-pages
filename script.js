@@ -117,3 +117,48 @@ async function downloadLastApk() {
     const file = new File([lastApk.data], lastApk.name, {
       type: 'application/vnd.android.package-archive',
     });
+
+
+  const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
+    output.textContent += '\nAPK скачан. Откройте файл в "Загрузках" и выберите "Package Installer" для установки.';
+  } catch (error) {
+    output.textContent = Ошибка скачивания: ${error.message};
+  }
+}
+
+// Показ истории загрузок
+async function showHistory() {
+  try {
+    const db = await getDB();
+    const history = await db.getAll('history');
+    if (!history.length) {
+      output.textContent = 'История загрузок пуста';
+      return;
+    }
+
+    output.innerHTML = '<h3>История загрузок:</h3>' + history
+      .map(item => 
+        <div class="history-item">
+          ${item.name} (${(item.size / 1024 / 1024).toFixed(2)} МБ)<br>
+          URL: <a href="${item.url}" target="_blank">${item.url}</a><br>
+          Загружен: ${new Date(item.date).toLocaleString()}
+        </div>
+      )
+      .join('');
+  } catch (error) {
+    output.textContent = Ошибка загрузки истории: ${error.message};
+  }
+}
+
+// Валидация URL при вводе
+apkUrlInput.addEventListener('input', () => {
+  const url = apkUrlInput.value.trim();
+  if (url) {
+    output.textContent = URL: ${url}. Нажмите "Скачать и сохранить APK".;
+  }
+});
