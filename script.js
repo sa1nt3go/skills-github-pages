@@ -1,19 +1,20 @@
+// Импорт idb с надежного CDN
 import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8.0.0/+esm';
-console.log("Script lo")
 
 const apkUrlInput = document.getElementById('apkUrl');
+const apkSelect = document.getElementById('apkSelect');
 const output = document.getElementById('output');
 const downloadBtn = document.getElementById('downloadBtn');
 const shareBtn = document.getElementById('shareBtn');
 const historyBtn = document.getElementById('historyBtn');
 
-// Логирование для отладки
+// Логирование
 function log(message) {
-  console.log('[APK Share] ${message}');
-  output.textContent += '\n${message';
+  console.log(`[APK Share] ${message}`);
+  output.textContent = message;
 }
 
-// Открытие базы данных IndexedDB
+// Открытие IndexedDB
 async function getDB() {
   try {
     log('Открытие IndexedDB...');
@@ -24,7 +25,7 @@ async function getDB() {
       },
     });
   } catch (error) {
-    log('Ошибка IndexedDB: ${error.message}');
+    log(`Ошибка IndexedDB: ${error.message}`);
     throw error;
   }
 }
@@ -33,7 +34,7 @@ async function getDB() {
 async function downloadAndSaveApk() {
   const url = apkUrlInput.value.trim();
   if (!url || !url.match(/\.(apk)$/i)) {
-    log('Введите действительный URL APK');
+    log('Введите действительный URL APK (например, https://example.com/app.apk)');
     return;
   }
 
@@ -44,10 +45,35 @@ async function downloadAndSaveApk() {
     });
 
     if (!response.ok) {
-      throw new Error(HTTP ошибка: ${response.status});
+      throw new Error(`HTTP ошибка: ${response.status}`);
     }
 
-    const blob = await response.blob();
+    const contentLength = response.headers.get('content-length');
+    let received = 0;
+    const chunks = [];
+    const reader = response.body.getReader();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (contentLength) {
+        log(`Загружено: ${(received / contentLength * 100).toFixed(2)}%`);
+      }
+    }
+
+    const blob = new Blob(chunks);
+    if (blob.size > 100 * 1024 * 1024) {
+      log('APK слишком большой (>100 МБ). Скачайте напрямую.');
+      const a = document.createElement('a');
+      a.href = url;
+      a.textContent = 'Скачать APK';
+      a.target = '_blank';
+      output.appendChild(a);
+      return;
+    }
+
     const fileName = url.split('/').pop() || 'app.apk';
     const file = new File([blob], fileName, {
       type: 'application/vnd.android.package-archive',
@@ -62,9 +88,9 @@ async function downloadAndSaveApk() {
       date: new Date(),
     });
 
-    log('APK сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ)');
+    log(`APK сохранен: ${fileName} (${(file.size / 1024 / 1024).toFixed(2)} МБ)\nНажмите "Поделиться последним APK".`);
   } catch (error) {
-    log('Ошибка загрузки: ${error.message}\nПопробуйте скачать напрямую: ${url}');
+    log(`Ошибка: ${error.message}\nСкачайте APK напрямую: ${url}`);
     const a = document.createElement('a');
     a.href = url;
     a.textContent = 'Скачать APK';
@@ -85,7 +111,7 @@ async function shareLastApk() {
     const db = await getDB();
     const apks = await db.getAll('apks');
     if (!apks.length) {
-      log('Нет сохраненных APK');
+      log('Нет сохраненных APK. Загрузите APK по URL.');
       return;
     }
 
@@ -102,17 +128,17 @@ async function shareLastApk() {
 
     await navigator.share({
       files: [file],
-      title: Установить ${file.name},
-      text: Установите ${file.name},
+      title: `Установить ${file.name}`,
+      text: `Установите ${file.name}`,
     });
-    log(APK ${file.name} передан. Выберите "Package Installer".);
+    log(`APK ${file.name} передан.\nВыберите "Package Installer" для установки.\nПроверьте настройки "Установка из неизвестных источников".`);
   } catch (error) {
-    log(error.name === 'AbortError' ? 'Обмен отменен' : 'Ошибка: ${error.message}');
+    log(error.name === 'AbortError' ? 'Обмен отменен' : `Ошибка: ${error.message}`);
     await downloadLastApk();
   }
 }
 
-// Скачивание APK как альтернатива
+// Скачивание APK
 async function downloadLastApk() {
   try {
     const db = await getDB();
@@ -135,11 +161,11 @@ async function downloadLastApk() {
     URL.revokeObjectURL(url);
     log('APK скачан. Откройте в "Загрузках".');
   } catch (error) {
-    log(Ошибка скачивания: ${error.message});
+    log(`Ошибка скачивания: ${error.message}`);
   }
 }
 
-// Показ истории загрузок
+// Показ истории
 async function showHistory() {
   try {
     const db = await getDB();
@@ -148,31 +174,48 @@ async function showHistory() {
       log('История пуста');
       return;
     }
-output.innerHTML = '<h3>История загрузок:</h3>' + history
-      .map(item => 
+
+    output.innerHTML = '<h3>История загрузок:</h3>' + history
+      .map(item => `
         <div class="history-item">
           ${item.name} (${(item.size / 1024 / 1024).toFixed(2)} МБ)<br>
           URL: <a href="${item.url}" target="_blank">${item.url}</a><br>
           Загружен: ${new Date(item.date).toLocaleString()}
         </div>
-      )
+      `)
       .join('');
   } catch (error) {
-    log(Ошибка истории: ${error.message});
+    log(`Ошибка истории: ${error.message}`);
   }
 }
 
 // Привязка событий
-downloadBtn.addEventListener('click', downloadAndSaveApk);
-shareBtn.addEventListener('click', shareLastApk);
-historyBtn.addEventListener('click', showHistory);
+downloadBtn.addEventListener('click', () => {
+  console.log('Download button clicked');
+  downloadAndSaveApk();
+});
+shareBtn.addEventListener('click', () => {
+  console.log('Share button clicked');
+  shareLastApk();
+});
+historyBtn.addEventListener('click', () => {
+  console.log('History button clicked');
+  showHistory();
+});
+
+apkSelect.addEventListener('change', () => {
+  apkUrlInput.value = apkSelect.value;
+  if (apkSelect.value) {
+    log(`Выбран URL: ${apkSelect.value}`);
+  }
+});
 
 apkUrlInput.addEventListener('input', () => {
   const url = apkUrlInput.value.trim();
   if (url) {
-    log('URL: ${url}. Нажмите "Скачать".');
+    log(`URL: ${url}. Нажмите "Скачать".`);
   }
 });
 
 // Инициализация
-log('Приложение загружено. Вставьте URL APK.');
+log('Приложение готово. Вставьте URL APK или выберите из списка.');
