@@ -2,6 +2,7 @@ import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8.0.0/+esm';
 
 const apkUrlInput = document.getElementById('apkUrl');
 const apkSelect = document.getElementById('apkSelect');
+const openAppSelect = document.getElementById('openAppSelect');
 const output = document.getElementById('output');
 const downloadBtn = document.getElementById('downloadBtn');
 const openBtn = document.getElementById('openBtn');
@@ -126,13 +127,66 @@ async function openLastApk() {
       return;
     }
 
+    // Обновленная функция openLastApk
+async function openLastApk() {
+  if (!navigator.share || !navigator.canShare) {
+    log('Web Share API не поддерживается. Скачивание файла...');
+    await downloadLastApk();
+    return;
+  }
+
+  try {
+    const db = await getDB();
+    const apks = await db.getAll('apks');
+    if (!apks.length) {
+      log('Нет сохраненных APK. Загрузите APK по URL.');
+      return;
+    }
+
+    const lastApk = apks[apks.length - 1];
+    const file = new File([lastApk.data], lastApk.name, {
+      type: 'application/vnd.android.package-archive',
+    });
+
+    if (!navigator.canShare({ files: [file] })) {
+      log('Передача файлов не поддерживается. Скачивание файла...');
+      await downloadLastApk();
+      return;
+    }
+
+    const appType = openAppSelect.value;
+    let shareTitle, shareText, alertMessage;
+    switch (appType) {
+      case 'file':
+        shareTitle = Открыть ${file.name} в файловом менеджере;
+        shareText = Проверьте APK ${file.name} в файловом менеджере (например, Google Files);
+        alertMessage = 'Выберите файловый менеджер, например, "Google Files" или "Файлы", для проверки APK.';
+        break;
+      case 'installer':
+        shareTitle = Открыть ${file.name} в Package Installer;
+        shareText = Проверьте APK ${file.name} в Package Installer;
+        alertMessage = 'Выберите "Package Installer" для проверки APK.';
+        break;
+      case 'other':
+      default:
+        shareTitle = Открыть ${file.name};
+        shareText = Проверьте APK ${file.name} в приложении по вашему выбору;
+        alertMessage = 'Выберите приложение для проверки APK (например, файловый менеджер или анализатор).';
+        break;
+    }
+
     await navigator.share({
       files: [file],
-      title: `Открыть ${file.name}`,
-      text: `Проверьте APK ${file.name} перед установкой`,
+      title: shareTitle,
+      text: shareText,
     });
-    log(`APK ${file.name} передан для открытия.\nВыберите приложение, например, "Файлы" или анализатор APK, для проверки.`);
-    alert('Выберите приложение, например, "Файлы", для проверки APK.');
+    log(APK ${file.name} передан для открытия.\nПроверьте файл и вернитесь для установки.);
+    alert(alertMessage);
+  } catch (error) {
+    log(error.name === 'AbortError' ? 'Действие отменено' : Ошибка открытия: ${error.message});
+    await downloadLastApk();
+  }
+}
   } catch (error) {
     log(error.name === 'AbortError' ? 'Действие отменено' : `Ошибка открытия: ${error.message}`);
     await downloadLastApk();
