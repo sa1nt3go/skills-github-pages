@@ -17,7 +17,12 @@
   </select>
   <input type="text" id="apkUrl" placeholder="Введите URL APK">
   <button id="downloadBtn">Скачать и сохранить APK</button>
-   <button id="openBtn">Open APK</button>
+  <select id="openAppSelect">
+  <option value="file">Файловый менеджер (Google Files, Файлы)</option>
+  <option value="installer">Package Installer</option>
+  <option value="other">Другое приложение</option>
+</select>
+<button id="openBtn">Открыть последний APK</button>
   <button id="shareBtn">Поделиться последним APK</button>
   <button id="historyBtn">Показать историю</button>
   <div id="output"></div>
