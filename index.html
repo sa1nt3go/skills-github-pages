@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APK Share from URL</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Манифест для PWA (опционально) -->
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <h1>APK Share from URL</h1>
+  <p>Введите URL APK и загрузите его для установки через системный установщик.</p>
+  <input type="text" id="apkUrl" placeholder="Введите URL APK (например, https://example.com/app.apk)">
+  <button onclick="downloadAndSaveApk()">Скачать и сохранить APK</button>
+  <button onclick="shareLastApk()">Поделиться последним APK</button>
+  <button onclick="showHistory()">Показать историю загрузок</button>
+  <div id="output"></div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
