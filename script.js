@@ -101,6 +101,12 @@ async function downloadAndSaveApk() {
 
 // Открытие последнего APK для проверки
 async function openLastApk() {
+  if (!navigator.share || !navigator.canShare) {
+    log('Web Share API не поддерживается. Скачивание файла...');
+    await downloadLastApk();
+    return;
+  }
+
   try {
     const db = await getDB();
     const apks = await db.getAll('apks');
@@ -114,20 +120,26 @@ async function openLastApk() {
       type: 'application/vnd.android.package-archive',
     });
 
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.textContent = `Открыть ${file.name}`;
-    a.click();
-    URL.revokeObjectURL(url);
-    log(`APK ${file.name} открыт/скачан для проверки.\nПроверьте файл и нажмите "Поделиться".`);
+    if (!navigator.canShare({ files: [file] })) {
+      log('Передача файлов не поддерживается. Скачивание файла...');
+      await downloadLastApk();
+      return;
+    }
+
+    await navigator.share({
+      files: [file],
+      title: `Открыть ${file.name}`,
+      text: `Проверьте APK ${file.name} перед установкой`,
+    });
+    log(`APK ${file.name} передан для открытия.\nВыберите приложение, например, "Файлы" или анализатор APK, для проверки.`);
+    alert('Выберите приложение, например, "Файлы", для проверки APK.');
   } catch (error) {
-    log(`Ошибка открытия: ${error.message}`);
+    log(error.name === 'AbortError' ? 'Действие отменено' : `Ошибка открытия: ${error.message}`);
+    await downloadLastApk();
   }
 }
 
-// Передача APK через Web Share API
+// Передача APK через Web Share API для установки
 async function shareLastApk() {
   if (!navigator.share || !navigator.canShare) {
     log('Web Share API не поддерживается');
@@ -167,7 +179,7 @@ async function shareLastApk() {
   }
 }
 
-// Скачивание APK
+// Скачивание APK как альтернатива
 async function downloadLastApk() {
   try {
     const db = await getDB();
@@ -188,7 +200,7 @@ async function downloadLastApk() {
     a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
-    log('APK скачан. Откройте в "Загрузках".');
+    log('APK скачан. Откройте в "Загрузках" или файловом менеджере для проверки/установки.');
   } catch (error) {
     log(`Ошибка скачивания: ${error.message}`);
   }
