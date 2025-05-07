@@ -5,18 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>APK Share from URL</title>
   <link rel="stylesheet" href="/skills-github-pages/styles.css">
-   <script type="module" src="/skills-github-pages/script.js"></script>
   <link rel="manifest" href="/skills-github-pages/manifest.json">
 </head>
 <body>
   <h1>APK Share from URL</h1>
-  <p>Введите URL APK и загрузите его для установки через системный установщик.</p>
-  <input type="text" id="apkUrl" placeholder="Введите URL APK (например, https://example.com/app.apk)">
-  <button id="downloadBtn()">Скачать и сохранить APK</button>
-  <button id="shareBtn()">Поделиться последним APK</button>
-  <button id="historyBtn()">Показать историю загрузок</button>
+  <p>Загрузите APK по URL и установите через системный установщик.</p>
+  <select id="apkSelect">
+    <option value="">Выберите APK или введите URL</option>
+    <option value="https://example.com/app1.apk">Test App 1</option>
+    <option value="https://example.com/app2.apk">Test App 2</option>
+  </select>
+  <input type="text" id="apkUrl" placeholder="Введите URL APK">
+  <button id="downloadBtn">Скачать и сохранить APK</button>
+  <button id="shareBtn">Поделиться последним APK</button>
+  <button id="historyBtn">Показать историю</button>
   <div id="output"></div>
 
- 
+  <script type="module" src="/skills-github-pages/script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/skills-github-pages/sw.js')
+        .then(() => console.log('Service Worker зарегистрирован'))
+        .catch(err => console.error('Ошибка Service Worker:', err));
+    }
+  </script>
 </body>
 </html>
